@@ -1,18 +1,32 @@
 package space.dector.openprinttag
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import space.dector.openprinttag.model.TagState
 import space.dector.openprinttag.ui.Theme
-import space.dector.openprinttag.ui.components.*
+import space.dector.openprinttag.ui.components.BasicInformationSection
+import space.dector.openprinttag.ui.components.MaterialClassificationSection
+import space.dector.openprinttag.ui.components.MaterialPropertiesSection
+import space.dector.openprinttag.ui.components.NfcUrlOptionsSection
+import space.dector.openprinttag.ui.components.TemperatureSettingsSection
+import space.dector.openprinttag.ui.components.WeightInformationSection
 import space.dector.openprinttag.TagInfoIntent as Intent
+import space.dector.openprinttag.TagInfoState as State
 
 
 @Composable
@@ -33,15 +47,24 @@ fun TagInfoScreen(
 
 @Composable
 fun TagInfoScreenUi(
-    state: TagState,
+    state: State,
     onIntent: (Intent) -> Unit,
 ) {
+    when (state) {
+        is State.WithData -> StateWithData(state, onIntent)
+    }
+}
+
+@Composable
+fun StateWithData(state: State.WithData, onIntent: (Intent) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
+        val data = state.data
+
         Text(
             text = "OpenPrintTag Configuration",
             style = MaterialTheme.typography.headlineMedium,
@@ -50,8 +73,8 @@ fun TagInfoScreenUi(
 
         // Material Classification Section
         MaterialClassificationSection(
-            materialClass = state.materialClass,
-            materialType = state.materialType,
+            materialClass = data.materialClass,
+            materialType = data.materialType,
             onMaterialClassChange = { onIntent(Intent.MaterialClassChange(it)) },
             onMaterialTypeChange = { onIntent(Intent.MaterialTypeChange(it)) },
         )
@@ -60,13 +83,13 @@ fun TagInfoScreenUi(
 
         // Basic Information Section
         BasicInformationSection(
-            brandName = state.brandName,
-            materialName = state.materialName,
-            primaryColor = state.primaryColor,
-            density = state.density,
-            gtin = state.gtin,
-            manufacturedDate = state.manufacturedDate,
-            countryOfOrigin = state.countryOfOrigin,
+            brandName = data.brandName,
+            materialName = data.materialName,
+            primaryColor = data.primaryColor,
+            density = data.density,
+            gtin = data.gtin,
+            manufacturedDate = data.manufacturedDate,
+            countryOfOrigin = data.countryOfOrigin,
             onBrandNameChange = { onIntent(Intent.BrandNameChange(it)) },
             onMaterialNameChange = { onIntent(Intent.MaterialNameChange(it)) },
             onPrimaryColorChange = { onIntent(Intent.PrimaryColorChange(it)) },
@@ -80,9 +103,9 @@ fun TagInfoScreenUi(
 
         // Material Properties Section
         MaterialPropertiesSection(
-            materialTags = state.materialTags,
-            hasGreenguardCertification = state.hasGreenguardCertification,
-            hasFlameRetardantCertification = state.hasFlameRetardantCertification,
+            materialTags = data.materialTags,
+            hasGreenguardCertification = data.hasGreenguardCertification,
+            hasFlameRetardantCertification = data.hasFlameRetardantCertification,
             onMaterialTagsChange = { onIntent(Intent.MaterialTagsChange(it)) },
             onGreenguardChange = { onIntent(Intent.GreenguardCertificationChange(it)) },
             onFlameRetardantChange = { onIntent(Intent.FlameRetardantCertificationChange(it)) },
@@ -92,9 +115,9 @@ fun TagInfoScreenUi(
 
         // Temperature Settings Section
         TemperatureSettingsSection(
-            printTemperature = state.printTemperature,
-            preheatTemperature = state.preheatTemperature,
-            bedTemperature = state.bedTemperature,
+            printTemperature = data.printTemperature,
+            preheatTemperature = data.preheatTemperature,
+            bedTemperature = data.bedTemperature,
             onPrintTemperatureChange = { onIntent(Intent.PrintTemperatureChange(it)) },
             onPreheatTemperatureChange = { onIntent(Intent.PreheatTemperatureChange(it)) },
             onBedTemperatureChange = { onIntent(Intent.BedTemperatureChange(it)) },
@@ -104,7 +127,7 @@ fun TagInfoScreenUi(
 
         // Weight Information Section
         WeightInformationSection(
-            weight = state.weight,
+            weight = data.weight,
             onWeightChange = { onIntent(Intent.WeightChange(it)) },
         )
 
@@ -112,9 +135,13 @@ fun TagInfoScreenUi(
 
         // NFC URL Options Section
         NfcUrlOptionsSection(
-            nfcUrlOptions = state.nfcUrlOptions,
+            nfcUrlOptions = data.nfcUrlOptions,
             onNfcUrlOptionsChange = { onIntent(Intent.NfcUrlOptionsChange(it)) },
         )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        VerificationSection(state)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -122,31 +149,19 @@ fun TagInfoScreenUi(
         Button(
             onClick = { /* TODO: Handle save */ },
             modifier = Modifier.fillMaxWidth(),
-            enabled = state.isValid && state.materialTagsValid && state.gtinValid,
+            enabled = data.isValid && data.materialTagsValid && data.gtinValid,
         ) {
             Text("Write to NFC Tag")
         }
+    }
+}
 
-        // Validation messages
-        if (!state.isValid) {
+@Composable
+fun VerificationSection(state: State.WithData) {
+    Column {
+        state.verificationErrors.forEach { error ->
             Text(
-                text = "Material type is required",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-        if (!state.materialTagsValid) {
-            Text(
-                text = "Maximum ${TagState.MAX_MATERIAL_TAGS} material tags allowed",
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-        if (!state.gtinValid) {
-            Text(
-                text = "GTIN must be 8, 12, 13, or 14 digits",
+                text = error.text(),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 8.dp),

@@ -5,39 +5,130 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
-import space.dector.openprinttag.model.*
+import space.dector.openprinttag.model.Color
+import space.dector.openprinttag.model.CountryCode
+import space.dector.openprinttag.model.MaterialClass
+import space.dector.openprinttag.model.MaterialTag
+import space.dector.openprinttag.model.MaterialType
+import space.dector.openprinttag.model.NfcUrlOptions
+import space.dector.openprinttag.model.TagState
+import space.dector.openprinttag.model.TemperatureRange
+import space.dector.openprinttag.model.WeightInfo
 import space.dector.openprinttag.TagInfoIntent as Intent
+import space.dector.openprinttag.TagInfoState as State
 
 
 class TagInfoViewModel : ViewModel() {
 
-    private val _state = MutableStateFlow(TagState())
-    val state: StateFlow<TagState> = _state.asStateFlow()
+    private val _state = MutableStateFlow<State>(State.WithData(TagState()))
+    val state: StateFlow<State> = _state.asStateFlow()
 
     fun onIntent(intent: Intent) {
         viewModelScope.launch {
             when (intent) {
-                is Intent.MaterialClassChange -> _state.value = _state.value.copy(materialClass = intent.value)
-                is Intent.MaterialTypeChange -> _state.value = _state.value.copy(materialType = intent.value)
-                is Intent.BrandNameChange -> _state.value = _state.value.copy(brandName = intent.value)
-                is Intent.MaterialNameChange -> _state.value = _state.value.copy(materialName = intent.value)
-                is Intent.PrimaryColorChange -> _state.value = _state.value.copy(primaryColor = intent.value)
-                is Intent.DensityChange -> _state.value = _state.value.copy(density = intent.value)
-                is Intent.GtinChange -> _state.value = _state.value.copy(gtin = intent.value)
-                is Intent.ManufacturedDateChange -> _state.value = _state.value.copy(manufacturedDate = intent.value)
-                is Intent.CountryOfOriginChange -> _state.value = _state.value.copy(countryOfOrigin = intent.value)
-                is Intent.MaterialTagsChange -> _state.value = _state.value.copy(materialTags = intent.value)
-                is Intent.GreenguardCertificationChange -> _state.value = _state.value.copy(hasGreenguardCertification = intent.value)
-                is Intent.FlameRetardantCertificationChange -> _state.value = _state.value.copy(hasFlameRetardantCertification = intent.value)
-                is Intent.PrintTemperatureChange -> _state.value = _state.value.copy(printTemperature = intent.value)
-                is Intent.PreheatTemperatureChange -> _state.value = _state.value.copy(preheatTemperature = intent.value)
-                is Intent.BedTemperatureChange -> _state.value = _state.value.copy(bedTemperature = intent.value)
-                is Intent.WeightChange -> _state.value = _state.value.copy(weight = intent.value)
-                is Intent.NfcUrlOptionsChange -> _state.value = _state.value.copy(nfcUrlOptions = intent.value)
+                is Intent.MaterialClassChange ->
+                    updateData { it.copy(materialClass = intent.value) }
+
+                is Intent.MaterialTypeChange ->
+                    updateData { it.copy(materialType = intent.value) }
+
+                is Intent.BrandNameChange ->
+                    updateData { it.copy(brandName = intent.value) }
+
+                is Intent.MaterialNameChange ->
+                    updateData { it.copy(materialName = intent.value) }
+
+                is Intent.PrimaryColorChange ->
+                    updateData { it.copy(primaryColor = intent.value) }
+
+                is Intent.DensityChange ->
+                    updateData { it.copy(density = intent.value) }
+
+                is Intent.GtinChange ->
+                    updateData { it.copy(gtin = intent.value) }
+
+                is Intent.ManufacturedDateChange ->
+                    updateData { it.copy(manufacturedDate = intent.value) }
+
+                is Intent.CountryOfOriginChange ->
+                    updateData { it.copy(countryOfOrigin = intent.value) }
+
+                is Intent.MaterialTagsChange ->
+                    updateData { it.copy(materialTags = intent.value) }
+
+                is Intent.GreenguardCertificationChange ->
+                    updateData { it.copy(hasGreenguardCertification = intent.value) }
+
+                is Intent.FlameRetardantCertificationChange ->
+                    updateData { it.copy(hasFlameRetardantCertification = intent.value) }
+
+                is Intent.PrintTemperatureChange ->
+                    updateData { it.copy(printTemperature = intent.value) }
+
+                is Intent.PreheatTemperatureChange ->
+                    updateData { it.copy(preheatTemperature = intent.value) }
+
+                is Intent.BedTemperatureChange ->
+                    updateData { it.copy(bedTemperature = intent.value) }
+
+                is Intent.WeightChange ->
+                    updateData { it.copy(weight = intent.value) }
+
+                is Intent.NfcUrlOptionsChange ->
+                    updateData { it.copy(nfcUrlOptions = intent.value) }
             }
         }
+    }
+
+    private fun updateData(transform: (TagState) -> TagState) {
+        val currentState = _state.value
+        if (currentState !is State.WithData) return
+
+        val newData = transform(currentState.data)
+        val errors = buildSet {
+            if (!newData.isValid) {
+                add(VerificationError.MaterialTypeRequired)
+            }
+            if (!newData.materialTagsValid) {
+                add(VerificationError.MaterialTagsLimitExceeded)
+            }
+            if (!newData.gtinValid) {
+                add(VerificationError.InvalidGtin)
+            }
+        }
+
+        _state.update {
+            currentState.copy(
+                data = newData,
+                verificationErrors = errors,
+            )
+        }
+    }
+}
+
+sealed interface TagInfoState {
+    data class WithData(
+        val data: TagState,
+        val verificationErrors: Set<VerificationError> = emptySet(),
+    ) : State
+}
+
+sealed interface VerificationError {
+    fun text(): String
+
+    data object MaterialTypeRequired : VerificationError {
+        override fun text(): String = "Material type is required"
+    }
+
+    data object MaterialTagsLimitExceeded : VerificationError {
+        override fun text(): String = "Maximum ${TagState.MAX_MATERIAL_TAGS} material tags allowed"
+    }
+
+    data object InvalidGtin : VerificationError {
+        override fun text(): String = "GTIN must be 8, 12, 13, or 14 digits"
     }
 }
 
