@@ -1,0 +1,7 @@
+  - [ ] Color selector.
+  - [ ] Tests.
+  - [ ] "Floating"/in-place validators.
+  - [ ] NFC-wrapped data generation (with headers).
+  - [ ] NFC-ready binary generation.
+  - [ ] Read data from NFC.
+  - [ ] Improve UI.
