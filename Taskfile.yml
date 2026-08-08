@@ -1,6 +1,18 @@
 version: '3'
 
 tasks:
+  build:apk:
+    desc: Build the Android debug APK
+    cmds:
+      - mise exec -- bash -lc 'flutter config --jdk-dir "$JAVA_HOME" >/dev/null && flutter build apk --debug'
+
+  run:apk:
+    desc: Install and launch the built debug APK on an attached Android device
+    deps:
+      - build:apk
+    cmds:
+      - android run --apks=build/app/outputs/flutter-apk/app-debug.apk
+
   render-ui:
     desc: Render the current OpenPrintTag UI to build/openprinttag-ui.png
     cmds:
