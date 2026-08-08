@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:openprinttag_mobile/main.dart';
+import 'package:openprinttag_mobile/widgets/tag_payload_view.dart';
 
 Future<void> _loadFont(String family, String path) async {
   final bytes = await File(path).readAsBytes();
