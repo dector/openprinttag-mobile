@@ -1,0 +1,14 @@
+version: '3'
+
+tasks:
+  run:
+    desc: Run the Flutter app on the first attached Android device
+    cmds:
+      - |
+        device_id=$(flutter devices --machine | python3 -c 'import json,sys; devices=json.load(sys.stdin); print(next((d["id"] for d in devices if d.get("targetPlatform", "").startswith("android")), ""))')
+        if [ -z "$device_id" ]; then
+          echo "No attached Android device found."
+          flutter devices
+          exit 1
+        fi
+        flutter run -d "$device_id"
