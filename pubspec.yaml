@@ -30,6 +30,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  open_print_tag:
+    git:
+      url: https://github.com/OpenPrintTag/openprinttag-dart
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

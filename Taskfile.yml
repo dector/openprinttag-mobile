@@ -1,6 +1,11 @@
 version: '3'
 
 tasks:
+  render-ui:
+    desc: Render the current OpenPrintTag UI to build/openprinttag-ui.png
+    cmds:
+      - flutter test --update-goldens test/render_ui_test.dart
+
   run:
     desc: Run the Flutter app on the first attached Android device
     cmds:
